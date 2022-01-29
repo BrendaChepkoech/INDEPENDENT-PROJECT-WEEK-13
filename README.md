@@ -16,7 +16,7 @@ Kira Plastinina is a Russian brand that is sold through a defunct chain of retai
 
 1. Perform clustering stating insights drawn from your analysis and visualizations.
 
-2.Upon implementation, provide comparisons between the approaches learned this week i.e. K-Means clustering vs Hierarchical clustering highlighting the strengths and limitations of each approach in the context of your analysis. 
+2. Upon implementation, provide comparisons between the approaches learned this week i.e. K-Means clustering vs Hierarchical clustering highlighting the strengths and limitations of each approach in the context of your analysis. 
 
 Your findings should help inform the team in formulating the marketing and sales strategies of the brand. 
 
