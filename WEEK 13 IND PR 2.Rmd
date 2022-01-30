@@ -1,0 +1,501 @@
+---
+title: "WEEK 13 IND PROJECT 2"
+author: "Brenda Bor"
+date: "1/30/2022"
+output: html_document
+---
+# Research Question
+
+Kira Plastinina is a Russian brand that is sold through a defunct chain of retail stores in Russia, Ukraine, Kazakhstan, Belarus, China, Philippines, and Armenia. The brand’s Sales and Marketing team would like to understand their customer’s behavior from data that they have collected over the past year. More specifically, they would like to learn the characteristics of customer groups.
+
+# Defining the question
+
+## i)Specifying the Data Analytic QuestionS
+
+1) Perform clustering stating insights drawn from your analysis and visualizations.
+
+2) Upon implementation, provide comparisons between the approaches learned this week i.e. K-Means clustering vs Hierarchical clustering highlighting the strengths and limitations of each approach in the context of your analysis.  
+
+## ii)Defining the Metric for Success
+
+To be able to build unsupervised learning algorithms that will help us understand the characteristics of customer groups in our dataset.
+
+## iii)Recording the Experimental Design
+
+1) Problem Definition
+
+2) Data Sourcing
+
+3) Check the Data
+
+4) Perform Data Cleaning
+
+5) Perform Exploratory Data Analysis  (Univariate, Bivariate & Multivariate)
+
+6) Implement the Solution
+
+7) Challenge the Solution
+
+8) Follow up Questions
+
+# Importing the relevant libraries
+
+```{r}
+local({r <- getOption("repos"); r["CRAN"] <- "https://cran.r-project.org/"; options(repos = r)})
+```
+
+```{r}
+# Import the library for label encoding
+update.packages(ask = FALSE)
+```
+```{r}
+install.packages("data.table")
+
+# latest development version:
+data.table::update.dev.pkg()
+```
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(caret)
+library(caretEnsemble)
+library(psych)
+library(Amelia)
+library(mice)
+library(GGally)
+library(rpart)
+
+```
+
+
+# Data Sourcing
+
+```{r}
+
+#Dataset link = http://bit.ly/EcommerceCustomersDataset
+df <- fread('http://bit.ly/EcommerceCustomersDataset')
+
+```
+
+```{r}
+# View the dataset in our environment
+View(df)
+```
+
+# Previewing the dataset
+
+ a) The top 6 rows in our dataset
+ 
+```{r}
+# View the head of the dataset 
+head(df)
+```
+b) The bottom 6 rows in our dataset
+
+```{r}
+# View the tail of the dataset 
+tail(df)
+```
+c) The shape of the dataset
+
+```{r}
+dim(df)
+```
+Our dataset has 12,330 rows and 18 columns
+
+d) The datatypes of the columns in our dataset
+```{r}
+#Checking the datatype
+str(df)
+
+```
+We have 2 logical columns, 7 numeric columns, 7 integer columns and 2 columns of the datatype character.
+
+# Data type conversion
+
+We shall convert the datatypes of some of our numerical columns and make them categorica for better analysis
+
+```{r}
+#convert the datatypes of some of our numerical columns and make them categorica
+df$OperatingSystems <- as.character(df$OperatingSystems)
+df$Browser <- as.character(df$Browser)
+df$Region <- as.character(df$Region)
+df$TrafficType <- as.character(df$TrafficType)
+
+```
+
+# Cleaning our dataset
+
+1) Checking for null values
+
+```{r}
+#checking null values
+colSums(is.na(df))
+```
+From the above, we can tell that we have 14 missing values in each of the following 8 columns namely : "Administrative", "Administrative_Duration", "Informational", "Informational_Duration", "ProductRelated", "ProductRelated_Duration", "BounceRates" and "ExitRates".
+
+# Dealing with missing values
+
+```{r}
+df2 <- na.omit(df)
+dim(df2)
+```
+```{r}
+dim(df)
+```
+We dropped the null values so we shall work with the cleaned dataset (df1)
+
+## 2.Checking for duplicates
+
+```{r}
+# Checking the number of duplicated rows
+duplicated_rows <- df2[duplicated(df2),]
+duplicated_rows
+```
+We can tell that 117 rows are duplicated, we shall drop them
+
+# Dropping duplicates
+
+```{r}
+# We create a new dataset that has unique values 
+new_df <- unique(df2)
+dim(new_df)
+```
+```{r}
+par(mfrow = c(4,3), mar = c(5,4,3,3))
+
+# Finding all columns that are numerical/not strings & subsetting to new dataframe
+
+numerical_col <- subset(new_df, select = c(1,2,3,4,5,6,7,8,9,10))
+num1 <- subset(new_df, select = c(1,2,3))
+num2 <- subset(new_df, select = c(4,5,6))
+num3 <- subset(new_df, select = c(7,8,9))
+
+```
+
+```{r}
+boxplot(num1)
+```
+```{r}
+boxplot(num2)
+```
+```{r}
+boxplot(num3)
+```
+The PageValues column also has so many outliers which we will not drop for the same reason given above.
+
+# EXPLORATORY DATA ANALYSIS
+
+## A. UNIVARIATE DATA ANALYSIS
+Measures of Central Tendency
+
+i) Mean
+```{r}
+#install.packages('dplyr')
+library(dplyr)
+```
+```{r}
+new_df %>% summarise_if(is.numeric, mean)
+```
+Mode
+
+```{r}
+# Mode
+getmode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+new_df %>% summarise_if(is.numeric, getmode)
+```
+Median
+
+```{r}
+#Median
+new_df %>% summarise_if(is.numeric, median)
+```
+Measures of Dispersion
+
+i) Range
+```{r}
+new_df %>% summarise_if(is.numeric, range)
+```
+ii) Quantiles
+```{r}
+# Quantiles
+new_df %>% summarise_if(is.numeric, quantile)
+
+```
+iii) Variance
+```{r}
+#Variance
+new_df %>% summarise_if(is.numeric, var)
+```
+iv) Standard Deviation
+```{r}
+#Standard Deviation
+new_df %>% summarise_if(is.numeric, sd)
+
+```
+# Frequency Tables
+
+```{r}
+month <- table(new_df$Month)
+month
+
+```
+
+The month of May had the most entries in our dataset followed by November then March.
+
+```{r}
+os <- table(new_df$OperatingSystems)
+os
+```
+Operating system 2 had the most entries in our dataset followed by Operating system 1
+
+```{r}
+browser <- table(new_df$Browser)
+browser
+```
+Browser 2 had the most entries in our dataset.
+
+```{r}
+region <- table(new_df$Region)
+region
+```
+Region 1 had the most entries in our dataset.
+
+```{r}
+traffic <- table(new_df$TrafficType)
+traffic
+```
+Traffic Type 2 had the most entries in our dataset.
+
+```{r}
+visitor <- table(new_df$VisitorType)
+visitor
+```
+```{r}
+weekend <- table(new_df$Weekend)
+weekend
+```
+```{r}
+revenue <- table(new_df$Revenue)
+revenue
+```
+## BIVARIATE DATA ANALYSIS
+
+First we can create variables that will hold the numerical columns in our dataset.
+
+```{r}
+admin <- new_df$Administrative
+addur <- new_df$Administrative_Duration
+info <- new_df$Informational
+infdur <- new_df$Informational_Duration
+prod <- new_df$ProductRelated
+prdur <- new_df$ProductRelated_Duration
+bounce <- new_df$BounceRates
+exit <- new_df$ExitRates
+page <- new_df$PageValues
+special <- new_df$SpecialDay
+```
+
+```{r}
+cov(admin, info)
+```
+There is positive covariance between the administrative and informational columns.
+
+```{r}
+cov(info, prod)
+```
+There is positive covariance between the informational and product related columns.
+
+```{r}
+cov(bounce, exit)
+```
+There is a positive covariance between the bounce rates and exit rates columns.
+
+```{r}
+cov(page, special)
+```
+There is a negative covariance between the page values and the special day columns.
+
+# Loading the required library
+
+```{r}
+library(corrplot)
+```
+```{r}
+# Correlation matrix
+correlation <- cor(numerical_col)
+corrplot(correlation)
+```
+Scatter plots
+ 
+```{r}
+# First we import the ggplot2 library which will help us in visualizations
+library(ggplot2)
+```
+
+```{r}
+ggplot(new_df, aes(admin, info)) + geom_point()
+```
+```{r}
+ggplot(new_df, aes(prod, info)) + geom_point()
+```
+# IMPLEMENTING THE SOLUTION
+
+# 1. K - Means Clustering
+
+We start by normalizing the data.
+
+```{r}
+# normalizing the data
+normalize <- function(x){
+  return ((x-min(x)) / (max(x)-min(x)))
+}
+
+com.norm <- normalize(numerical_col)
+
+```
+
+```{r}
+# this step was added because finding the optimum number of clusters took a while to run. Therefore we take a random sample of 1300 which is around 10% of the initial dataset
+Com <- com.norm[sample(nrow(com.norm), size=1300), ]
+head(Com)
+```
+```{r}
+local({r <- getOption("repos"); r["CRAN"] <- "https://cran.r-project.org/"; options(repos = r)})
+```
+
+```{r}
+# Import the library for label encoding
+update.packages(ask = FALSE)
+```
+
+```{r}
+# Loading the required libraries
+library(factoextra)
+```
+
+```{r}
+library(NbClust)
+library (cluster)
+```
+
+Determine the optimal number of k clusters using the elbow method.
+
+```{r}
+
+# Elbow method
+fviz_nbclust(Com, kmeans, method = "wss") +
+            geom_vline(xintercept = 3, linetype = 2)+
+            labs(subtitle = "Elbow method")
+```
+Using the elbow method, we were able to determine that the optimal number of k in our case is 3.
+
+We can also determine the optimal number of k using the silhouette method and compare with the elbow method.
+
+```{r}
+# Silhouette method
+fviz_nbclust(Com, kmeans, method = "silhouette")+
+  labs(subtitle = "Silhouette method")
+```
+Using the silhouette method, we were able to determine that the optimal number of k in our case is 2.
+
+We can also try using the gap statistic method with nboot set at 500.
+
+```{r}
+# Gap statistic
+# nboot = 50 to keep the function speedy. 
+
+set.seed(123)
+fviz_nbclust(Com, kmeans, nstart = 25,  method = "gap_stat", nboot = 500)+
+  labs(subtitle = "Gap statistic method")
+```
+
+Using the gap statistic method, we find the optimal number of clusters as 1.
+
+```{r}
+# choosing the best number of clusters
+nb<-NbClust(data = Com, distance = "euclidean",
+        min.nc = 2, max.nc = 15, method = "kmeans")
+```
+
+```{r}
+fviz_nbclust(nb)
+```
+Fit the kmeans model with our data
+
+```{r}
+
+km <- kmeans(Com,3,iter.max = 10, nstart = 25)
+km
+```
+```{r}
+#plot results of final k-means model
+fviz_cluster(km, data = Com)
+```
+# Hierarchical Clustering
+
+For hierarchical, we first install and load the dplyr package.
+
+```{r}
+# Loading package
+library(dplyr)
+	
+# Summary of dataset in package
+head(Com)
+# Installing the package
+install.packages("dplyr")
+```
+
+Find the euclidean distance matrix in our dataset.
+
+```{r}
+
+# Finding distance matrix
+distance <- dist(Com, method = 'euclidean')
+```
+
+Fit the hierarchical model to our train dataset.
+
+```{r}
+
+# Fitting Hierarchical clustering Model
+# to training dataset
+set.seed(240) # Setting seed
+Hierar_cl <- hclust(distance, method = "average")
+```
+
+Plot the dendogram of our model.
+
+```{r}
+
+# Plotting dendrogram
+plot(Hierar_cl)
+```
+Cutting the tree by the number of clusters.
+
+```{r}
+
+# Cutting tree by no. of clusters
+fit <- cutree(Hierar_cl, k = 3 )
+fit
+```
+
+```{r}
+table(fit)
+```
+# CHALLENGING THE SOLUTION
+
+ We could challenge the solution by using different numbers of k clusters and compare the results of the algorithms.
+ 
+ Using the elbow method, we were able to determine that 3 was the optimal number of k clusters in our dataset.
+ 
+ Using the gap statistic method, 1 was the optimal number of k clusters.
+
+Using the silhouette method, 2 was the optimal number of k clusters
+
+
