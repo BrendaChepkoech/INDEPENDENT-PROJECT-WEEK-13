@@ -1,0 +1,978 @@
+---
+title: "WEEK 13 IND PR 1"
+author: "Brenda Bor"
+date: "1/30/2022"
+output: html_document
+---
+# Research Question
+
+A Kenyan entrepreneur has created an online cryptography course and would want to advertise it on her blog. She currently targets audiences originating from various countries. In the past, she ran ads to advertise a related course on the same blog and collected data in the process. She would now like to employ your services as a Data Science Consultant to help her identify which individuals are most likely to click on her ads.
+
+
+# Defining the question
+
+## i)Specifying the Data Analytic Question
+Create a supervised learning model to help identify which individuals are most likely to click on the ads in the blog. 
+
+## ii)Defining the Metric for Success
+
+Being able to Perform  univariate and bivariate analysis and creating various supervised learning models and choosing the best performing one that can help us predict which individuals are most likely to click on the ads in the blog.
+
+## iii)Recording the Experimental Design
+
+1)  Read the dataset into our environment (RStudio)
+
+2)  Preview the dataset
+
+3)  Find and deal with outliers, anomalies, and missing data within the dataset
+
+4)  Perform univariate and bivariate analysis
+
+5)  Creating various supervised learning models
+
+6)  From your insights provide a conclusion and recommendation
+
+# Loading the libraries
+
+```{r}
+local({r <- getOption("repos"); r["CRAN"] <- "https://cran.r-project.org/"; options(repos = r)})
+```
+
+```{r}
+# Import the library for label encoding
+update.packages(ask = FALSE)
+```
+
+```{r}
+install.packages("data.table")
+
+# latest development version:
+data.table::update.dev.pkg()
+```
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(caret)
+library(caretEnsemble)
+library(psych)
+library(Amelia)
+library(mice)
+library(GGally)
+library(rpart)
+```
+
+# Loading the dataset
+
+```{r}
+# Dataset url = http://bit.ly/IPAdvertisingData
+# 
+#library("data.table")
+Advert <- read.csv("http://bit.ly/IPAdvertisingData")
+
+# View the dataset in our environment
+View(Advert)
+
+```
+
+## Previewing the dataset
+
+1) Previewing the first 6 rows of the dataset
+
+```{r}
+#Previewing the head of the dataset
+head(Advert)
+
+```
+
+2) Previewing the last 6 rows of the dataset
+
+```{r}
+#Previewing the tail of the dataset
+tail(Advert)
+```
+
+3) Checking the shape of the dataset
+
+```{r}
+#Checking the shape of the dataset
+dim(Advert)
+
+```
+The dataset has 1000 rows and 10 columns
+
+4)The datatypes of the columns in our dataset
+```{r}
+# Structure of the dataset
+str(Advert)
+```
+We can see that 3 columns are of the type integer, 3 are of the type number and 4 columns are of the character type.
+
+# Cleaning the Dataset
+
+## Checking for duplicates
+
+```{r}
+# Checking the number of duplicated rows
+duplicated_rows <- Advert[duplicated(Advert),]
+duplicated_rows
+```
+There are no duplicates in our dataset
+
+## Checking for null values
+
+```{r}
+# Sum of null values in each column
+colSums(is.na(Advert))
+
+```
+
+There are no null values in our dataset
+
+## Checking for  outliers in the numeric columns
+
+We check for outliers using box plots
+
+```{r}
+# Checking for  outliers in the Daily.Time.Spent.on.Site column
+boxplot(Advert$Daily.Time.Spent.on.Site)
+```
+
+
+From the boxplot, we can see that there are no outliers in the 'Daily Time spent on site' column.
+
+```{r}
+#Checking for outlier in the age column
+boxplot(Advert$Age)
+
+```
+
+From the boxplot, we can see that there are no outliers in the 'Age' column.
+
+```{r}
+#Checking for outliers in the Daily.Internet.Usage column
+boxplot(Advert$Daily.Internet.Usage)
+
+```
+From the boxplot, we can see that there are no outliers in the 'Daily.Internet.Usage' column. 
+
+```{r}
+#checking for outliers in the Area.Income column
+boxplot(Advert$Area.Income)
+
+```
+
+From the boxplot, we can see that there are no outliers in the 'Area.Income' column.
+
+We shall not drop the outlier because income amount varies from one person to another. It is possible to get a person who gets littlr income compared to the other people.
+
+# Exploratory Data Analysis
+
+## Univariate Analysis
+
+### Measures of Central Tendency
+
+### 1)Mean
+```{r}
+#Mean
+mean(Advert$Daily.Time.Spent.on.Site)
+
+```
+The average Time Spent Daily on Site is 65
+
+```{r}
+# Mean Area.Income
+mean(Advert$Area.Income)
+
+```
+The average area income in our dataset is 55000
+
+```{r}
+# Mean age
+mean(Advert$Age)
+
+```
+The average age of individuals in our dataset is 36 years
+
+```{r}
+#Mean for Daily.Internet.Usage
+mean(Advert$Daily.Internet.Usage)
+
+```
+The average internet usage daily is 180
+
+### 2)Median
+
+```{r}
+#Median Daily.Time.Spent.on.Site
+median(Advert$Daily.Time.Spent.on.Site)
+
+```
+The Median Time Spent Daily on Site is 68.215 minutes
+
+```{r}
+# median Area.Income
+median(Advert$Area.Income)
+```
+The Median income in our dataset is 57012.3
+
+```{r}
+# Median age
+median(Advert$Age)
+
+```
+The median age of individuals in our dataset is 35 years
+
+```{r}
+#Median for Daily.Internet.Usage
+median(Advert$Daily.Internet.Usage)
+
+```
+The Median  Daily.Internet.Usage is 183.13
+
+### 3)Mode
+
+```{r}
+# Define a function for getting the mode 
+
+getmode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+#mode for Daily.Internet.Usage
+getmode(Advert$Daily.Internet.Usage)
+
+```
+The mode for daily internet usage is 167.22
+
+```{r}
+#Mode for age
+getmode(Advert$Age)
+```
+The mode of age in our dataset is 31
+
+```{r}
+getmode(Advert$Daily.Time.Spent.on.Site)
+```
+The mode of time spent in our dataset is 62.26
+
+## Measures of Dispersion
+
+### 1)Range
+
+```{r}
+range(Advert$Age)
+
+```
+The range of age in our dataset is between 19 and 21
+
+```{r}
+range(Advert$Daily.Time.Spent.on.Site)
+
+```
+The range for daily time spent on site is between 32.60 and 91.43 minutes
+
+```{r}
+#range for area income
+range(Advert$Area.Income)
+
+```
+The range for area income is] between 13996.5 and 79484.8
+
+#### 2)Variance
+
+```{r}
+#Variance for Age
+var(Advert$Age)
+```
+The variance in the age is 77.18
+
+```{r}
+#Variance for Time Spent on Site
+var(Advert$Daily.Time.Spent.on.Site)
+```
+The variance in the daily time spent on site is 251.33
+
+```{r}
+#Variance for Internet Usage
+var(Advert$Daily.Internet.Usage)
+```
+The variance in the daily internet usage is 1927.415
+
+### 3)Standard deviation
+
+```{r}
+#Standard deviation for Age
+sd(Advert$Age)
+```
+Standard deviation for Age is 8.785
+
+```{r}
+#Standard deviation for Internet Usage
+sd(Advert$Daily.Internet.Usage)
+```
+Standard deviation for daily Internet Usage is 43.90234
+
+```{r}
+#Standard deviation for Time Spent on Site
+sd(Advert$Daily.Time.Spent.on.Site)
+```
+Standard deviation for Time Spent on Site is 15.85361
+
+### 3)Quantiles
+```{r}
+#time quantiles for daily Internet Usage
+quantile(Advert$Daily.Internet.Usage)
+```
+The first quantile in the daily Internet Usage is 138.83
+The third quantile in the daily Internet Usage is 218.7925
+
+```{r}
+#time quantiles for age 
+quantile(Advert$Age)
+```
+The first quantile in age is 29
+The third quantile in age is 42
+
+```{r}
+#time quantiles for Daily.Time.Spent.on.Site
+quantile(Advert$Daily.Time.Spent.on.Site)
+```
+
+The first quantile in the daily time spent is 51.36 minutes.
+The third quantile in the daily time spent on site is 78.55 minutes.
+
+### Frequency Tables
+
+```{r}
+# Gender Frequency Table
+# 0 symbolizes female while 1 is male
+gender <- table(Advert$Male)
+gender
+```
+From the frequency table, we can see that there are 519 females and 481 males in our dataset.
+
+```{r}
+# Country Frequency Table
+countries <- (table(Advert$Country))
+# Sort the table so as to find the country with the most individuals in our dataset
+sorted_countries <- sort(countries, decreasing = TRUE)
+head(sorted_countries)
+```
+We can say that both Czech Republic and France had 9 individuals, while Afghanistan, Australia, Cyprus and Greece all had 8 individuals each.
+
+```{r}
+# Clicked on Ad Frequency Table
+# 0 means the individual did not click on the ad, 1 means the individual clicked on an ad
+clicked <- table(Advert$Clicked.on.Ad)
+clicked
+```
+
+From the frequency table we can say that 500 people clicked on the add and 500 people did not click on the add
+
+
+```{r}
+# City Frequency Table
+city <- table(Advert$City)
+# Sort the table so as to find the city with the most individuals in our dataset
+sorted_city <- sort(city, decreasing = TRUE)
+head(sorted_city)
+```
+From the frequecy table we can say that Lisamouth and Williamsport had 3 people and the other cities had 2 people
+
+```{r}
+# Age Frequency Table
+age <- table(Advert$Age)
+# Sort the table so as to find the age with the most individuals
+sorted_age <- sort(age, decreasing = TRUE)
+head(sorted_age)
+```
+we can tell that individuals aged between 31 and 36 years old are the most in our dataset.
+
+### Graphical Plots
+
+#### 1)Histograms
+
+```{r}
+#histogram for the age column
+hist(Advert$Age, xlab = 'Age', main = 'Histogram for Age')
+```
+
+From the histogram, we can also tell that age 25 - 35 had the highest frequency in the dataset.
+
+### 2)Barplot
+
+```{r}
+# Gender barplot
+barplot(gender, xlab = 'Gender', ylab = 'Count', main = 'Bar Chart for Gender')
+
+```
+
+From the bar chart, we can tell that 0(female) had more people that 1(male) in our dataset.
+
+```{r}
+# bar plot for age
+age <- table(Advert$Age)
+# Then we plot a bar chart 
+barplot(age, xlab ='Age', ylab ='Frequency', main ='Age Bar Chart')
+```
+
+From the bar chart above, we can tell that age 31 had the highest frequency in the dataset.
+
+## Bivariate Analysis
+
+### Covariance
+
+```{r}
+#covariance between age and internet usage
+age <- Advert$Age
+units <- Advert$Daily.Internet.Usage
+cov(age, units)
+```
+
+There is a negative covariance(-141.6348) between age and the daily usage of internet which means that the older a person is, the less units they use on internet daily.
+
+```{r}
+# covariance between age and the daily time spent on the site
+age <- Advert$Age
+time <- Advert$Daily.Time.Spent.on.Site
+cov(age, time)
+```
+There is a negative covariance(-46.17415) between age and the daily time Spent on Site which means that the older a person is, the less units they visit the site.
+
+### Correlation
+
+```{r}
+# correlation between age and daily internet usage
+cor(age, units)
+```
+There is a negative linear relationship between age and the daily internet usage.
+
+```{r}
+#  correlation between age and time spent on site
+cor(age, time)
+```
+There is a negative linear relationship between age and the daily time spent on the site.
+
+### Correlation Matrix
+
+First we load the corrplot library which enables us to plot a correlation matrix.
+
+```{r}
+ #correlation library
+library(corrplot) # This library allows us to plot correlation.
+
+```
+We go ahead to create a subset that holds the numerical columns in our dataset.
+
+```{r}
+# Create a subset of the numerical columns in our dataset
+numerical <- subset(Advert, select = c(Daily.Time.Spent.on.Site, Age, Daily.Internet.Usage, Area.Income))
+```
+
+
+Plot a correlation matrix for the numerical variables in our dataset.
+
+```{r}
+# correlation matrix
+cor(numerical)
+```
+
+### Scatter Plots
+
+```{r}
+#scatter plot
+plot(age, time, xlab = 'Age', ylab = 'Daily Time Spent on Site', main = 'Age vs Daily Time Spent on Site')
+```
+
+From the scatter plot, we can see that as the age increases, time spent on site redices and vice versa.
+
+```{r}
+#scatter plot
+plot(age, units, xlab = 'Age', ylab = 'Daily Internet Usage', main = 'Age vs Daily Internet Usage')
+```
+
+From this scatter plot, we can see that as the age increases, the daily internet usage reduces and vice versa.
+
+
+# IMPLEMENTING THE SOLUTION
+
+We will implement the solution to our research problem by creating the following supervised learning models :
+
+i) k Nearest Neighbors (kNN) 
+
+ii) Support Vector Machine (SVM)
+
+iii) Decision Trees 
+
+iv) Naive Bayes
+
+ v) Logistic regression
+
+# Label encoding our dataset
+
+```{r}
+# Import the library for label encoding
+library(superml)
+```
+
+```{r}
+# Introduce the label encoder object
+label <- LabelEncoder$new()
+
+# Label encode the categorical columns i.e. City, Country
+Advert$City <- label$fit_transform(Advert$City)
+print(Advert$City)
+```
+
+```{r}
+Advert$Country <- label$fit_transform(Advert$Country)
+print(Advert$Country)
+```
+
+```{r}
+print(Advert)
+```
+
+After label encoding, we decide to drop the Timestamp and Ad Topic Line columns since we will not use them in modelling.
+```{r}
+Advert1 = subset(Advert, select = c("Daily.Time.Spent.on.Site","Age","Area.Income","Daily.Internet.Usage","City","Male","Country","Clicked.on.Ad"))
+```
+
+```{r}
+head(Advert1)
+```
+
+# 1. Naive Bayes
+
+```{r}
+#lets do data description
+describe(Advert1)
+
+```
+
+We convert the target variable into a factor.
+
+```{r}
+#We convert the target variable into a factor
+Advert1$`Clicked.on.Ad` <- factor(Advert1$`Clicked.on.Ad`)
+```
+
+```{r}
+#We then check the first 6 records in our new dataframe
+head(Advert1)
+```
+
+Split the data into train and test data sets
+
+```{r}
+#Split the data into training and test data sets
+indxTrain <- createDataPartition(y = Advert$`Clicked.on.Ad`, p = 0.7, list = FALSE)
+train<- Advert[indxTrain,]
+test <- Advert[-indxTrain,]
+
+```
+
+```{r}
+#Checking the dimensions of the split sets
+prop.table(table(Advert$`Clicked.on.Ad`)) * 100
+
+```
+
+```{r}
+#Checking the dimensions of the train sets
+prop.table(table(train$`Clicked.on.Ad`)) * 100
+
+```
+
+```{r}
+#Checking the dimensions of the test sets
+prop.table(table(test$`Clicked.on.Ad`)) * 100
+
+```
+
+We then compare the outcomes of the training and testing phase by creating objects that will hold the predictor and response variables separately.
+
+```{r}
+#Checking the dimensions of the test sets
+x = train[, -8]
+y = train$`Clicked.on.Ad`
+```
+
+```{r}
+#Loading our inbuilt e1071 package that holds the Naive Bayes function.
+update.packages('e1071')
+library(e1071)
+```
+
+```{r}
+#Then we build our Naive Bayes model using our training data.
+model = naiveBayes(`Clicked.on.Ad` ~ ., data = train)
+```
+
+```{r}
+#Predicting the target variable using the testing data.
+y_pred = predict(model, newdata = test)
+```
+
+```{r}
+#Create a table that holds the predicted and actual values
+confusion = table(test$`Clicked.on.Ad`, y_pred)
+
+```
+
+```{r}
+#Evaluate the model using the confusion matrix() function which tells us the accuracy of the model.
+confusionMatrix(confusion)
+```
+
+We can deduce that the accuracy of our Naive Bayes classifier is 96%.
+
+# 2. KNN
+
+```{r}
+#First we create a uniform distribution of 1000 rows.
+set.seed(1234)
+# Randomize the rows and create a uniform distribution of 1000 rows
+random <- runif(1000)
+random
+```
+
+```{r}
+#Order the rows in our randomized dataset
+ad_random <- Advert1[order(random),]
+```
+
+```{r}
+#Preview the first 6 rows in our dataset
+head(ad_random)
+```
+
+```{r}
+#Create a normalization function and normalize the response variables in our sampled dataset.
+normal <- function(x) (
+  return( ((x - min(x)) /(max(x)-min(x))) )
+)
+
+normal(1:8)
+
+```
+
+```{r}
+ad_new <- as.data.frame(lapply(ad_random[,-8], normal))
+summary(ad_new)
+
+```
+
+```{r}
+#Create test and train data sets
+train <- ad_new[1:700,]
+test <- ad_new[701:1000,]
+train_label <- ad_random[1:700,8]
+test_label <- ad_random[701:1000,8]
+```
+
+```{r}
+#Check the dimensions in our train sets
+dim(train_label)
+
+```
+
+```{r}
+#Check the dimensions in our train sets
+dim(train)
+
+```
+```{r}
+#We build our KNN model from the class library
+library(class)    
+require(class)
+#cl = train_label[,1]
+model <- knn(train = train, test = test, cl = train_label$`Clicked.on.Ad`, k=32)
+table(factor(model))
+```
+
+```{r}
+# Print out the confusion matrix 
+tb = table(test_label$`Clicked.on.Ad`,model)
+tb
+```
+
+```{r}
+# Checking the accuracy of our KNN model
+accuracy <- function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
+accuracy(tb)
+```
+
+## 3. Support Vector Machine (SVM) Classifier
+
+First we encode the target feature into a factor
+
+```{r}
+# Encoding the target feature as factor
+Advert1$`Clicked on Ad` = factor(Advert1$`Clicked.on.Ad`, levels = c(0, 1))
+```
+
+We install the necessary package and then split the data in a 70/30 proportion so as to enable comparison with the other models.
+
+```{r}
+# Splitting the dataset into the Training set and Test set
+install.packages('caTools')
+library(caTools)
+
+set.seed(123)
+split = sample.split(Advert1$`Clicked.on.Ad`, SplitRatio = 0.7)
+
+training = subset(Advert1, split == TRUE)
+test = subset(Advert1, split == FALSE)
+```
+
+We then fit the SVM model to our training data.
+
+```{r}
+# Fitting SVM to the Training set
+
+classifier = svm(formula = `Clicked.on.Ad` ~ .,
+				data = training,
+				type = 'C-classification',
+				kernel = 'linear')
+```
+
+We then predict using the testing set.
+
+```{r}
+# Predicting the Test set results
+y_pred = predict(classifier, newdata = test)
+```
+
+We then formulate the confusion matrix and check the accuracy based on the number of accurate predicted values.
+
+```{r}
+# Making the Confusion Matrix
+cm = table(test$`Clicked on Ad`, y_pred)
+confusionMatrix(cm)
+
+```
+
+
+## 4. Random Forest Classifier
+
+Install the packages necessary.
+
+```{r}
+# Installing package
+install.packages("caTools")	 # For sampling the dataset
+```
+```{r}
+install.packages("randomForest") # For implementing random forest algorithm
+
+```
+Loading the package into our environment.
+
+# Loading package
+
+```{r}
+library(caTools)
+library(randomForest)
+```
+
+Split the data in a 70/30 proportion.
+
+# Splitting data in train and test data
+
+```{r}
+split <- sample.split(Advert1$`Clicked.on.Ad`, SplitRatio = 0.7)
+split
+```
+
+```{r}
+train <- subset(Advert1, split == "TRUE")
+test <- subset(Advert1, split == "FALSE")
+```
+
+Fit the random forest model to our training dataset.
+
+```{r}
+# Fitting Random Forest to the train dataset
+set.seed(120) # Setting seed
+classifier_RF = randomForest(x = train[,-8],
+							y = train$`Clicked on Ad`,
+							ntree = 500)
+
+classifier_RF
+```
+
+Make predictions on the test set.
+
+
+```{r}
+# Predicting the Test set results
+y_pred = predict(classifier_RF, newdata = test)
+
+```
+
+Evaluate using the confusion matrix.
+
+```{r}
+# Confusion Matrix
+con = table(test$`Clicked on Ad`, y_pred)
+con
+
+```
+
+```{r}
+confusionMatrix(con)
+
+```
+
+Our Random Forest classifier gave us an accuracy score of 95.3%
+
+```{r}
+# Plotting model
+plot(classifier_RF)
+```
+
+We then assess the most important features in our dataset.
+
+```{r}
+# Importance plot
+importance(classifier_RF)
+```
+
+From the feature importance table, we can tell that the most important features in our dataset are:
+
+Daily Internet Usage
+Daily Time Spent on Site
+Area Income
+Age
+
+```{r}
+# Variable importance plot
+varImpPlot(classifier_RF)
+```
+
+# CHALLENGING THE SOLUTION
+
+We decided to challenge the solution using the Logistic Regression Model so that we can assess whether it will perform better than the other supervised learning algorithms.
+
+First we install the necessary package required.
+
+```{r}
+# Installing the package
+install.packages("caTools") # For Logistic regression
+install.packages("ROCR")	 # For ROC curve to evaluate model
+```
+
+Load the packages.
+
+```{r}
+# Loading package
+library(caTools)
+library(ROCR)
+
+```
+
+Split the dataset in a 70/30 proportion for comparison purposes.
+
+```{r}
+# Splitting dataset
+split <- sample.split(Advertising$`Clicked on Ad`, SplitRatio = 0.7)
+split
+```
+
+Initiate the training and test sets.
+
+```{r}
+training <- subset(Advertising, split == "TRUE")
+test <- subset(Advertising, split == "FALSE")
+```
+
+Train the logistic model using our training data.
+
+```{r}
+# Training model
+logistic_model <- glm(`Clicked on Ad` ~ .,
+					data = training,
+					family = "binomial")
+logistic_model
+```
+
+Summary of the model.
+
+```{r}
+# Summary
+summary(logistic_model)
+```
+
+Make predictions on the test data.
+
+```{r}
+# Predict test data based on model
+predict_reg <- predict(logistic_model,
+					test, type = "response")
+predict_reg
+
+```
+
+Changing probabilities.
+
+```{r}
+# Changing probabilities
+predict_reg <- ifelse(predict_reg >0.5, 1, 0)
+```
+
+Evaluate the performance of the model using the accuracy.
+
+```{r}
+# Evaluating model accuracy
+# using confusion matrix
+table(test$`Clicked on Ad`, predict_reg)
+```
+
+```{r}
+missing_classerr <- mean(predict_reg != test$`Clicked on Ad`)
+print(paste('Accuracy =', 1 - missing_classerr))
+```
+
+We have achieved an accuracy score of 98% using the logistic regression model.
+
+# CONCLUSIONS
+
+## From the univariate data analysis, we can conclude that:
+
+There were more females than males in our dataset.
+
+The dataset was balanced in the sense that 500 individuals clicked on the ads while 500 individuals did not click on the ads.
+
+Individuals who are between 28 and 36 years old were the most in our dataset.
+
+Czech Republic and France both had the highest number of individuals (9) in the dataset.
+
+Lisamouth and Williamsport cities both had the highest number of individuals (3) in the dataset.
+
+## From the bivariate data analysis, we can conclude that:
+
+There is a negative covariance and correlation between age and daily time spent on the site which means that the older an individual is, the less time they spend on the site.
+
+There is also a negative covariance and correlation between age and the daily internet usage which means that the younger an individual is, the higher the internet usage is as compared to an older individual.
+
+On the other hand, there is a positive covariance and correlation between the daily internet usage and the daily time spent on the internet.
+
+For the modelling techniques, we used different supervised learning algorithms to help us predict whether an individual will click on an ad and determined that:
+
+Naive Bayes had an accuracy of 96%
+KNN had an accuracy of 96%
+SVM had an accuracy of 97%
+
+Random Forest Classifier has an accuracy of 95.3% which was the lowest as compared to the other models.
+
+We then challenged the solution using a different supervised learning algorithm, the logistic regression model, which gave us the highest accuracy of 98% in predicting whether an individual will click on an ad.
+
+# RECOMMENDATIONS
+
+We recommend that she focuses her attention more on the youth as they use the internet more and spend more time on the site as compared to the older individuals.
+
+We recommend that she creates an ad that targets individuals aged between 25 and 35 years old seeing as they are the most in our dataset.
+
+
