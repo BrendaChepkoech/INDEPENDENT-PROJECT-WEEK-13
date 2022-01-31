@@ -108,6 +108,13 @@ str(Advert)
 ```
 We can see that 3 columns are of the type integer, 3 are of the type number and 4 columns are of the character type.
 
+We should convert the target variable (Clicked.on.Ad) into a factor since it is categorical and not an integer.
+
+```{r}
+Advert$`Clicked.on.Ad` = factor(Advert$`Clicked.on.Ad`)
+
+```
+
 # Cleaning the Dataset
 
 ## Checking for duplicates
@@ -379,7 +386,7 @@ city <- table(Advert$City)
 sorted_city <- sort(city, decreasing = TRUE)
 head(sorted_city)
 ```
-From the frequecy table we can say that Lisamouth and Williamsport had 3 people and the other cities had 2 people
+From the frequency table we can say that Lisamouth and Williamsport had 3 people and the other cities had 2 people
 
 ```{r}
 # Age Frequency Table
@@ -500,20 +507,17 @@ From this scatter plot, we can see that as the age increases, the daily internet
 
 We will implement the solution to our research problem by creating the following supervised learning models :
 
-i) k Nearest Neighbors (kNN) 
+i) Naive Bayes 
 
 ii) Support Vector Machine (SVM)
 
-iii) Decision Trees 
-
-iv) Naive Bayes
-
- v) Logistic regression
+iii) Logistic regression
 
 # Label encoding our dataset
 
 ```{r}
 # Import the library for label encoding
+update.packages("R6")
 library(superml)
 ```
 
@@ -532,10 +536,11 @@ print(Advert$Country)
 ```
 
 ```{r}
-print(Advert)
+head(Advert)
 ```
 
 After label encoding, we decide to drop the Timestamp and Ad Topic Line columns since we will not use them in modelling.
+
 ```{r}
 Advert1 = subset(Advert, select = c("Daily.Time.Spent.on.Site","Age","Area.Income","Daily.Internet.Usage","City","Male","Country","Clicked.on.Ad"))
 ```
@@ -545,12 +550,6 @@ head(Advert1)
 ```
 
 # 1. Naive Bayes
-
-```{r}
-#lets do data description
-describe(Advert1)
-
-```
 
 We convert the target variable into a factor.
 
@@ -565,18 +564,29 @@ head(Advert1)
 ```
 
 Split the data into train and test data sets
+```{r}
+#Loading libraries
+update.packages("caret")
+update.packages("caretEnsemble")
+```
+
+```{r}
+#Loading libraries
+library(caret)
+library(caretEnsemble)
+```
 
 ```{r}
 #Split the data into training and test data sets
-indxTrain <- createDataPartition(y = Advert$`Clicked.on.Ad`, p = 0.7, list = FALSE)
-train<- Advert[indxTrain,]
-test <- Advert[-indxTrain,]
+indxTrain <- createDataPartition(y = Advert1$`Clicked.on.Ad`, p = 0.7, list = FALSE)
+train<- Advert1[indxTrain,]
+test <- Advert1[-indxTrain,]
 
 ```
 
 ```{r}
 #Checking the dimensions of the split sets
-prop.table(table(Advert$`Clicked.on.Ad`)) * 100
+prop.table(table(Advert1$`Clicked.on.Ad`)) * 100
 
 ```
 
@@ -627,90 +637,15 @@ confusion = table(test$`Clicked.on.Ad`, y_pred)
 confusionMatrix(confusion)
 ```
 
-We can deduce that the accuracy of our Naive Bayes classifier is 96%.
+We can deduce that the accuracy of our Naive Bayes classifier is 94%.
 
-# 2. KNN
 
-```{r}
-#First we create a uniform distribution of 1000 rows.
-set.seed(1234)
-# Randomize the rows and create a uniform distribution of 1000 rows
-random <- runif(1000)
-random
-```
-
-```{r}
-#Order the rows in our randomized dataset
-ad_random <- Advert1[order(random),]
-```
-
-```{r}
-#Preview the first 6 rows in our dataset
-head(ad_random)
-```
-
-```{r}
-#Create a normalization function and normalize the response variables in our sampled dataset.
-normal <- function(x) (
-  return( ((x - min(x)) /(max(x)-min(x))) )
-)
-
-normal(1:8)
-
-```
-
-```{r}
-ad_new <- as.data.frame(lapply(ad_random[,-8], normal))
-summary(ad_new)
-
-```
-
-```{r}
-#Create test and train data sets
-train <- ad_new[1:700,]
-test <- ad_new[701:1000,]
-train_label <- ad_random[1:700,8]
-test_label <- ad_random[701:1000,8]
-```
-
-```{r}
-#Check the dimensions in our train sets
-dim(train_label)
-
-```
-
-```{r}
-#Check the dimensions in our train sets
-dim(train)
-
-```
-```{r}
-#We build our KNN model from the class library
-library(class)    
-require(class)
-#cl = train_label[,1]
-model <- knn(train = train, test = test, cl = train_label$`Clicked.on.Ad`, k=32)
-table(factor(model))
-```
-
-```{r}
-# Print out the confusion matrix 
-tb = table(test_label$`Clicked.on.Ad`,model)
-tb
-```
-
-```{r}
-# Checking the accuracy of our KNN model
-accuracy <- function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
-accuracy(tb)
-```
-
-## 3. Support Vector Machine (SVM) Classifier
+## 2. Support Vector Machine (SVM) Classifier
 
 First we encode the target feature into a factor
 
 ```{r}
-# Encoding the target feature as factor
+# convert the target feature as factor
 Advert1$`Clicked on Ad` = factor(Advert1$`Clicked.on.Ad`, levels = c(0, 1))
 ```
 
@@ -755,103 +690,6 @@ confusionMatrix(cm)
 
 ```
 
-
-## 4. Random Forest Classifier
-
-Install the packages necessary.
-
-```{r}
-# Installing package
-install.packages("caTools")	 # For sampling the dataset
-```
-```{r}
-install.packages("randomForest") # For implementing random forest algorithm
-
-```
-Loading the package into our environment.
-
-# Loading package
-
-```{r}
-library(caTools)
-library(randomForest)
-```
-
-Split the data in a 70/30 proportion.
-
-# Splitting data in train and test data
-
-```{r}
-split <- sample.split(Advert1$`Clicked.on.Ad`, SplitRatio = 0.7)
-split
-```
-
-```{r}
-train <- subset(Advert1, split == "TRUE")
-test <- subset(Advert1, split == "FALSE")
-```
-
-Fit the random forest model to our training dataset.
-
-```{r}
-# Fitting Random Forest to the train dataset
-set.seed(120) # Setting seed
-classifier_RF = randomForest(x = train[,-8],
-							y = train$`Clicked on Ad`,
-							ntree = 500)
-
-classifier_RF
-```
-
-Make predictions on the test set.
-
-
-```{r}
-# Predicting the Test set results
-y_pred = predict(classifier_RF, newdata = test)
-
-```
-
-Evaluate using the confusion matrix.
-
-```{r}
-# Confusion Matrix
-con = table(test$`Clicked on Ad`, y_pred)
-con
-
-```
-
-```{r}
-confusionMatrix(con)
-
-```
-
-Our Random Forest classifier gave us an accuracy score of 95.3%
-
-```{r}
-# Plotting model
-plot(classifier_RF)
-```
-
-We then assess the most important features in our dataset.
-
-```{r}
-# Importance plot
-importance(classifier_RF)
-```
-
-From the feature importance table, we can tell that the most important features in our dataset are:
-
-Daily Internet Usage
-Daily Time Spent on Site
-Area Income
-Age
-
-```{r}
-# Variable importance plot
-varImpPlot(classifier_RF)
-```
-
 # CHALLENGING THE SOLUTION
 
 We decided to challenge the solution using the Logistic Regression Model so that we can assess whether it will perform better than the other supervised learning algorithms.
@@ -860,8 +698,8 @@ First we install the necessary package required.
 
 ```{r}
 # Installing the package
-install.packages("caTools") # For Logistic regression
-install.packages("ROCR")	 # For ROC curve to evaluate model
+update.packages("caTools") # For Logistic regression
+update.packages("ROCR")	 # For ROC curve to evaluate model
 ```
 
 Load the packages.
@@ -870,22 +708,21 @@ Load the packages.
 # Loading package
 library(caTools)
 library(ROCR)
-
 ```
 
 Split the dataset in a 70/30 proportion for comparison purposes.
 
 ```{r}
 # Splitting dataset
-split <- sample.split(Advertising$`Clicked on Ad`, SplitRatio = 0.7)
+split <- sample.split(Advert1$`Clicked on Ad`, SplitRatio = 0.7)
 split
 ```
 
 Initiate the training and test sets.
 
 ```{r}
-training <- subset(Advertising, split == "TRUE")
-test <- subset(Advertising, split == "FALSE")
+training <- subset(Advert1, split == "TRUE")
+test <- subset(Advert1, split == "FALSE")
 ```
 
 Train the logistic model using our training data.
@@ -935,7 +772,7 @@ missing_classerr <- mean(predict_reg != test$`Clicked on Ad`)
 print(paste('Accuracy =', 1 - missing_classerr))
 ```
 
-We have achieved an accuracy score of 98% using the logistic regression model.
+We have achieved an accuracy score of 100% using the logistic regression model.
 
 # CONCLUSIONS
 
@@ -961,13 +798,11 @@ On the other hand, there is a positive covariance and correlation between the da
 
 For the modelling techniques, we used different supervised learning algorithms to help us predict whether an individual will click on an ad and determined that:
 
-Naive Bayes had an accuracy of 96%
-KNN had an accuracy of 96%
-SVM had an accuracy of 97%
+Naive Bayes had an accuracy of 94%
 
-Random Forest Classifier has an accuracy of 95.3% which was the lowest as compared to the other models.
+SVM had an accuracy of 100%
 
-We then challenged the solution using a different supervised learning algorithm, the logistic regression model, which gave us the highest accuracy of 98% in predicting whether an individual will click on an ad.
+We then challenged the solution using a different supervised learning algorithm, the logistic regression model, which gave us an accuracy of 100% in predicting whether an individual will click on an ad.
 
 # RECOMMENDATIONS
 
